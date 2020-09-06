@@ -326,33 +326,62 @@ mod generator {
 type Result<T, E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
 
 static CORE_MODULES: Lazy<HashSet<&'static str>> = Lazy::new(|| HashSet::from_iter([
-	"calib3d",
+	//"calib3d",
 	"core",
-	#[cfg(not(feature = "opencv-32"))]
-	"dnn",
-	#[cfg(feature = "opencv-4")]
-	"dnn_superres",
-	"features2d",
-	"flann",
-	#[cfg(feature = "opencv-4")]
-	"gapi",
-	"highgui",
+	// #[cfg(not(feature = "opencv-32"))]
+	// "dnn",
+	// #[cfg(feature = "opencv-4")]
+	// "dnn_superres",
+	// "features2d",
+	// "flann",
+	// #[cfg(feature = "opencv-4")]
+	// "gapi",
+	// "highgui",
 	"imgcodecs",
-	"imgproc",
-	"ml",
-	"objdetect",
-	"photo",
-	#[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
-	"shape",
-	"stitching",
-	#[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
-	"superres",
+	//"imgproc",
+	//"ml",
+	//"objdetect",
+	// "photo",
+	// #[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
+	// "shape",
+	// "stitching",
+	// #[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
+	// "superres",
 	"video",
-	"videoio",
-	#[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
-	"videostab",
-	"viz",
+	// "videoio",
+	// #[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
+	// "videostab",
+	// "viz",
 ].iter().copied()));
+
+// static CORE_MODULES: Lazy<HashSet<&'static str>> = Lazy::new(|| HashSet::from_iter([
+// 	"calib3d",
+// 	"core",
+// 	#[cfg(not(feature = "opencv-32"))]
+// 	"dnn",
+// 	#[cfg(feature = "opencv-4")]
+// 	"dnn_superres",
+// 	"features2d",
+// 	"flann",
+// 	#[cfg(feature = "opencv-4")]
+// 	"gapi",
+// 	"highgui",
+// 	"imgcodecs",
+// 	"imgproc",
+// 	"ml",
+// 	"objdetect",
+// 	"photo",
+// 	#[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
+// 	"shape",
+// 	"stitching",
+// 	#[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
+// 	"superres",
+// 	"video",
+// 	"videoio",
+// 	#[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
+// 	"videostab",
+// 	"viz",
+// ].iter().copied()));
 
 static DEBUG_MODULE: &str = "";
 
