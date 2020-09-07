@@ -32,17 +32,11 @@ mod generator {
 	use glob::glob;
 
 	use super::{
-		file_copy_to_dir,
-		get_versioned_hub_dirs,
-		is_core_module,
-		MODULES,
-		OUT_DIR,
-		Result,
-		SRC_CPP_DIR,
+		file_copy_to_dir, get_versioned_hub_dirs, is_core_module, Result, MODULES, OUT_DIR, SRC_CPP_DIR,
 		SRC_DIR,
 	};
 
-	fn read_dir(path: &Path) -> Result<impl Iterator<Item=DirEntry>> {
+	fn read_dir(path: &Path) -> Result<impl Iterator<Item = DirEntry>> {
 		Ok(path.read_dir()?.filter_map(|e| e.ok()))
 	}
 
@@ -60,8 +54,7 @@ mod generator {
 		if !target_dir.exists() {
 			fs::create_dir_all(&target_dir)?;
 		}
-		let src_filename = src_file.file_name()
-			.ok_or_else(|| "Can't calculate filename")?;
+		let src_filename = src_file.file_name().ok_or_else(|| "Can't calculate filename")?;
 		let target_file = target_dir.join(src_filename);
 		if fs::rename(&src_file, &target_file).is_err() {
 			fs::copy(&src_file, &target_file)?;
@@ -85,7 +78,12 @@ mod generator {
 
 		for entry in read_dir(&OUT_DIR)? {
 			let path = entry.path();
-			if path.is_file() && path.extension().and_then(OsStr::to_str).map_or(true, |ext| !ext.eq_ignore_ascii_case("dll")) {
+			if path.is_file()
+				&& path
+					.extension()
+					.and_then(OsStr::to_str)
+					.map_or(true, |ext| !ext.eq_ignore_ascii_case("dll"))
+			{
 				let _ = fs::remove_file(path);
 			}
 		}
@@ -100,10 +98,10 @@ mod generator {
 			unreachable!();
 		};
 
-		let clang_stdlib_include_dir = Arc::new(env::var_os("OPENCV_CLANG_STDLIB_PATH")
-			.map(|p| PathBuf::from(p))
-		);
-		let num_jobs = env::var("NUM_JOBS").ok()
+		let clang_stdlib_include_dir =
+			Arc::new(env::var_os("OPENCV_CLANG_STDLIB_PATH").map(|p| PathBuf::from(p)));
+		let num_jobs = env::var("NUM_JOBS")
+			.ok()
 			.and_then(|jobs| jobs.parse().ok())
 			.unwrap_or(2);
 		let job_server = jobserver::Client::new(num_jobs).expect("Can't create job server");
@@ -112,8 +110,16 @@ mod generator {
 		if cfg!(feature = "clang-runtime") {
 			let clang = clang::Clang::new().expect("Cannot initialize clang");
 			println!("=== Clang: {}", clang::get_version());
-			let gen = binding_generator::Generator::new(clang_stdlib_include_dir.as_deref(), &opencv_header_dir, &*SRC_CPP_DIR, clang);
-			eprintln!("=== Clang command line args: {:#?}", gen.build_clang_command_line_args());
+			let gen = binding_generator::Generator::new(
+				clang_stdlib_include_dir.as_deref(),
+				&opencv_header_dir,
+				&*SRC_CPP_DIR,
+				clang,
+			);
+			eprintln!(
+				"=== Clang command line args: {:#?}",
+				gen.build_clang_command_line_args()
+			);
 			start = Instant::now();
 			modules.iter().for_each(|module| {
 				let bindings_writer = binding_generator::writer::RustNativeBindingWriter::new(
@@ -127,44 +133,52 @@ mod generator {
 				println!("Generated: {}", module);
 			});
 			drop(generator_build); // fixme, prevent unused var warning
-			// fixme, https://github.com/twistedfall/opencv-rust/issues/145
-			// let status = generator_build.expect("Impossible").wait()?;
-			// if !status.success() {
-			// 	return Err("Failed to build the bindings generator".into());
-			// }
-			// let opencv_header_dir = Arc::new(opencv_header_dir.to_owned());
-			// start = Instant::now();
-			// modules.iter().for_each(|module| {
-			// 	let token = job_server.acquire().expect("Can't acquire token from job server");
-			// 	let join_handle = thread::spawn({
-			// 		let clang_stdlib_include_dir = Arc::clone(&clang_stdlib_include_dir);
-			// 		let opencv_header_dir = Arc::clone(&opencv_header_dir);
-			// 		move || {
-			// 			let clang_stdlib_include_dir = (*clang_stdlib_include_dir).as_ref()
-			// 				.and_then(|p| p.to_str())
-			// 				.unwrap_or("None");
-			// 			let mut bin_generator = std::process::Command::new(OUT_DIR.join("release/binding-generator"));
-			// 			bin_generator.arg(&*opencv_header_dir)
-			// 				.arg(&*SRC_CPP_DIR)
-			// 				.arg(&*OUT_DIR)
-			// 				.arg(&module)
-			// 				.arg(version)
-			// 				.arg(clang_stdlib_include_dir);
-			// 			let res = bin_generator.status().expect("Can't run bindings generator");
-			// 			if !res.success() {
-			// 				panic!("Failed to run the bindings generator");
-			// 			}
-			// 			println!("Generated: {}", module);
-			// 			drop(token); // needed to move the token to the thread
-			// 		}
-			// 	});
-			// 	join_handles.push(join_handle);
-			// });
+		                 // fixme, https://github.com/twistedfall/opencv-rust/issues/145
+		                 // let status = generator_build.expect("Impossible").wait()?;
+		                 // if !status.success() {
+		                 // 	return Err("Failed to build the bindings generator".into());
+		                 // }
+		                 // let opencv_header_dir = Arc::new(opencv_header_dir.to_owned());
+		                 // start = Instant::now();
+		                 // modules.iter().for_each(|module| {
+		                 // 	let token = job_server.acquire().expect("Can't acquire token from job server");
+		                 // 	let join_handle = thread::spawn({
+		                 // 		let clang_stdlib_include_dir = Arc::clone(&clang_stdlib_include_dir);
+		                 // 		let opencv_header_dir = Arc::clone(&opencv_header_dir);
+		                 // 		move || {
+		                 // 			let clang_stdlib_include_dir = (*clang_stdlib_include_dir).as_ref()
+		                 // 				.and_then(|p| p.to_str())
+		                 // 				.unwrap_or("None");
+		                 // 			let mut bin_generator = std::process::Command::new(OUT_DIR.join("release/binding-generator"));
+		                 // 			bin_generator.arg(&*opencv_header_dir)
+		                 // 				.arg(&*SRC_CPP_DIR)
+		                 // 				.arg(&*OUT_DIR)
+		                 // 				.arg(&module)
+		                 // 				.arg(version)
+		                 // 				.arg(clang_stdlib_include_dir);
+		                 // 			let res = bin_generator.status().expect("Can't run bindings generator");
+		                 // 			if !res.success() {
+		                 // 				panic!("Failed to run the bindings generator");
+		                 // 			}
+		                 // 			println!("Generated: {}", module);
+		                 // 			drop(token); // needed to move the token to the thread
+		                 // 		}
+		                 // 	});
+		                 // 	join_handles.push(join_handle);
+		                 // });
 		} else {
 			let clang = clang::Clang::new().expect("Cannot initialize clang");
 			println!("=== Clang: {}", clang::get_version());
-			let gen = binding_generator::Generator::new(clang_stdlib_include_dir.as_deref(), &opencv_header_dir, &*SRC_CPP_DIR, clang);
-			eprintln!("=== Clang command line args: {:#?}", gen.build_clang_command_line_args());
+			let gen = binding_generator::Generator::new(
+				clang_stdlib_include_dir.as_deref(),
+				&opencv_header_dir,
+				&*SRC_CPP_DIR,
+				clang,
+			);
+			eprintln!(
+				"=== Clang command line args: {:#?}",
+				gen.build_clang_command_line_args()
+			);
 			let gen = Arc::new(gen);
 			start = Instant::now();
 			modules.iter().for_each(|module| {
@@ -218,9 +232,14 @@ mod generator {
 			if module_cpp.is_file() {
 				file_copy_to_dir(&module_cpp, &cpp_hub_dir)?;
 				let module_types_cpp = OUT_DIR.join(format!("{}_types.hpp", module));
-				let mut module_types_file = OpenOptions::new().create(true).truncate(true).write(true).open(&module_types_cpp)?;
-				let mut type_files: Vec<PathBuf> = glob(&format!("{}/???-{}-*.type.cpp", out_dir_as_str, module))?
-					.collect::<Result<_, glob::GlobError>>()?;
+				let mut module_types_file = OpenOptions::new()
+					.create(true)
+					.truncate(true)
+					.write(true)
+					.open(&module_types_cpp)?;
+				let mut type_files: Vec<PathBuf> =
+					glob(&format!("{}/???-{}-*.type.cpp", out_dir_as_str, module))?
+						.collect::<Result<_, glob::GlobError>>()?;
 				type_files.sort_unstable();
 				for entry in type_files.into_iter() {
 					io::copy(&mut File::open(entry)?, &mut module_types_file)?;
@@ -271,7 +290,10 @@ mod generator {
 						if write_header {
 							write_if_contrib(&mut types_rs)?;
 							writeln!(&mut types_rs, "mod {}_types {{", module)?;
-							writeln!(&mut types_rs, "\tuse crate::{{mod_prelude::*, core, types, sys}};")?;
+							writeln!(
+								&mut types_rs,
+								"\tuse crate::{{mod_prelude::*, core, types, sys}};"
+							)?;
 							writeln!(&mut types_rs)?;
 							write_header = false;
 						}
@@ -325,34 +347,40 @@ mod generator {
 
 type Result<T, E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
 
-static CORE_MODULES: Lazy<HashSet<&'static str>> = Lazy::new(|| HashSet::from_iter([
-	//"calib3d",
-	"core",
-	// #[cfg(not(feature = "opencv-32"))]
-	// "dnn",
-	// #[cfg(feature = "opencv-4")]
-	// "dnn_superres",
-	// "features2d",
-	// "flann",
-	// #[cfg(feature = "opencv-4")]
-	// "gapi",
-	// "highgui",
-	"imgcodecs",
-	//"imgproc",
-	//"ml",
-	//"objdetect",
-	// "photo",
-	// #[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
-	// "shape",
-	// "stitching",
-	// #[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
-	// "superres",
-	"video",
-	// "videoio",
-	// #[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
-	// "videostab",
-	// "viz",
-].iter().copied()));
+static CORE_MODULES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+	HashSet::from_iter(
+		[
+			//"calib3d",
+			"core",
+			// #[cfg(not(feature = "opencv-32"))]
+			// "dnn",
+			// #[cfg(feature = "opencv-4")]
+			// "dnn_superres",
+			// "features2d",
+			// "flann",
+			// #[cfg(feature = "opencv-4")]
+			// "gapi",
+			// "highgui",
+			"imgcodecs",
+			//"imgproc",
+			//"ml",
+			//"objdetect",
+			// "photo",
+			// #[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
+			// "shape",
+			// "stitching",
+			// #[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
+			// "superres",
+			"video",
+			// "videoio",
+			// #[cfg(any(feature = "opencv-32", feature = "opencv-34"))]
+			// "videostab",
+			// "viz",
+		]
+		.iter()
+		.copied(),
+	)
+});
 
 // static CORE_MODULES: Lazy<HashSet<&'static str>> = Lazy::new(|| HashSet::from_iter([
 // 	"calib3d",
@@ -387,8 +415,11 @@ static DEBUG_MODULE: &str = "";
 
 static MODULES: OnceCell<Vec<String>> = OnceCell::new();
 
-static OUT_DIR: Lazy<PathBuf> = Lazy::new(|| PathBuf::from(env::var_os("OUT_DIR").expect("Can't read OUT_DIR env var")));
-static MANIFEST_DIR: Lazy<PathBuf> = Lazy::new(|| PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("Can't read CARGO_MANIFEST_DIR env var")));
+static OUT_DIR: Lazy<PathBuf> =
+	Lazy::new(|| PathBuf::from(env::var_os("OUT_DIR").expect("Can't read OUT_DIR env var")));
+static MANIFEST_DIR: Lazy<PathBuf> = Lazy::new(|| {
+	PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("Can't read CARGO_MANIFEST_DIR env var"))
+});
 static SRC_DIR: Lazy<PathBuf> = Lazy::new(|| MANIFEST_DIR.join("src"));
 static SRC_CPP_DIR: Lazy<PathBuf> = Lazy::new(|| MANIFEST_DIR.join("src_cpp"));
 
@@ -414,39 +445,31 @@ struct PackageName {}
 
 impl PackageName {
 	pub fn env() -> Option<Cow<'static, str>> {
-		env::var("OPENCV_PACKAGE_NAME")
-			.ok()
-			.map(|x| x.into())
+		env::var("OPENCV_PACKAGE_NAME").ok().map(|x| x.into())
 	}
 
 	pub fn env_pkg_config() -> Option<Cow<'static, str>> {
-		env::var("OPENCV_PKGCONFIG_NAME")
-			.ok()
-			.map(|x| x.into())
+		env::var("OPENCV_PKGCONFIG_NAME").ok().map(|x| x.into())
 	}
 
 	pub fn env_cmake() -> Option<Cow<'static, str>> {
-		env::var("OPENCV_CMAKE_NAME")
-			.ok()
-			.map(|x| x.into())
+		env::var("OPENCV_CMAKE_NAME").ok().map(|x| x.into())
 	}
 
 	pub fn env_vcpkg() -> Option<Cow<'static, str>> {
-		env::var("OPENCV_VCPKG_NAME")
-			.ok()
-			.map(|x| x.into())
+		env::var("OPENCV_VCPKG_NAME").ok().map(|x| x.into())
 	}
 
 	pub fn pkg_config() -> Cow<'static, str> {
-		Self::env()
-			.or_else(Self::env_pkg_config)
-			.unwrap_or_else(|| if cfg!(feature = "opencv-32") || cfg!(feature = "opencv-34") {
+		Self::env().or_else(Self::env_pkg_config).unwrap_or_else(|| {
+			if cfg!(feature = "opencv-32") || cfg!(feature = "opencv-34") {
 				"opencv".into()
 			} else if cfg!(feature = "opencv-4") {
 				"opencv4".into()
 			} else {
 				unreachable!("Feature flags should have been checked in main()");
-			})
+			}
+		})
 	}
 
 	pub fn cmake() -> Cow<'static, str> {
@@ -456,15 +479,15 @@ impl PackageName {
 	}
 
 	pub fn vcpkg() -> Cow<'static, str> {
-		Self::env()
-			.or_else(Self::env_vcpkg)
-			.unwrap_or_else(|| if cfg!(feature = "opencv-32") || cfg!(feature = "opencv-34") {
+		Self::env().or_else(Self::env_vcpkg).unwrap_or_else(|| {
+			if cfg!(feature = "opencv-32") || cfg!(feature = "opencv-34") {
 				"opencv3".into()
 			} else if cfg!(feature = "opencv-4") {
 				"opencv4".into()
 			} else {
 				unreachable!("Feature flags should have been checked in main()");
-			})
+			}
+		})
 	}
 }
 
@@ -491,42 +514,47 @@ impl Library {
 			if file.starts_with(LIB_PREFIX) {
 				file.drain(..LIB_PREFIX.len());
 			}
-			LIB_EXTS_INNER.iter()
-				.for_each(|&inner_ext| if let Some(inner_ext_idx) = file.find(inner_ext) {
+			LIB_EXTS_INNER.iter().for_each(|&inner_ext| {
+				if let Some(inner_ext_idx) = file.find(inner_ext) {
 					file.drain(inner_ext_idx..);
-				});
+				}
+			});
 			if orig_len != file.len() {
 				path.set_file_name(file);
 			}
 		}
 	}
 
-	fn process_library_list(libs: impl IntoIterator<Item=impl Into<PathBuf>>) -> impl Iterator<Item=String> {
-		libs.into_iter()
-			.map(|x| {
-				let mut path: PathBuf = x.into();
-				let is_framework = path.extension()
-					.and_then(OsStr::to_str)
-					.map_or(false, |e| e.eq_ignore_ascii_case("framework"));
-				Self::strip_lib_file_decorations(&mut path);
-				path.file_name()
-					.and_then(|f| f.to_str()
-						.map(|f| if is_framework {
+	fn process_library_list(
+		libs: impl IntoIterator<Item = impl Into<PathBuf>>,
+	) -> impl Iterator<Item = String> {
+		libs.into_iter().map(|x| {
+			let mut path: PathBuf = x.into();
+			let is_framework = path
+				.extension()
+				.and_then(OsStr::to_str)
+				.map_or(false, |e| e.eq_ignore_ascii_case("framework"));
+			Self::strip_lib_file_decorations(&mut path);
+			path
+				.file_name()
+				.and_then(|f| {
+					f.to_str().map(|f| {
+						if is_framework {
 							format!("framework={}", f)
 						} else {
 							f.to_owned()
-						})
-					).expect("Invalid library name")
-			})
+						}
+					})
+				})
+				.expect("Invalid library name")
+		})
 	}
 
-	fn list(link_paths: &str) -> impl Iterator<Item=&str> {
-		link_paths.split(',')
-			.map(str::trim)
-			.filter(|&x| !x.is_empty())
+	fn list(link_paths: &str) -> impl Iterator<Item = &str> {
+		link_paths.split(',').map(str::trim).filter(|&x| !x.is_empty())
 	}
 
-	fn version_from_include_paths(include_paths: impl Iterator<Item=impl AsRef<Path>>) -> Option<String> {
+	fn version_from_include_paths(include_paths: impl Iterator<Item = impl AsRef<Path>>) -> Option<String> {
 		include_paths
 			.filter_map(|x| get_version_from_headers(x.as_ref()))
 			.next()
@@ -534,12 +562,20 @@ impl Library {
 
 	#[inline]
 	fn emit_link_search(path: &str, typ: Option<&str>) -> String {
-		format!("cargo:rustc-link-search={}{}", typ.map_or("".to_string(), |t| format!("{}=", t)), path)
+		format!(
+			"cargo:rustc-link-search={}{}",
+			typ.map_or("".to_string(), |t| format!("{}=", t)),
+			path
+		)
 	}
 
 	#[inline]
 	fn emit_link_lib(path: &str, typ: Option<&str>) -> String {
-		format!("cargo:rustc-link-lib={}{}", typ.map_or("".to_string(), |t| format!("{}=", t)), path)
+		format!(
+			"cargo:rustc-link-lib={}{}",
+			typ.map_or("".to_string(), |t| format!("{}=", t)),
+			path
+		)
 	}
 
 	fn process_manual_link_search(cargo_metadata: &mut Vec<String>, link_paths: &str) {
@@ -547,23 +583,22 @@ impl Library {
 			Self::list(link_paths)
 				.map(|path| {
 					let out = iter::once(Self::emit_link_search(path, None));
-					#[cfg(target_os = "macos")] {
-						out.chain(
-							iter::once(Self::emit_link_search(path, Some("framework")))
-						)
+					#[cfg(target_os = "macos")]
+					{
+						out.chain(iter::once(Self::emit_link_search(path, Some("framework"))))
 					}
-					#[cfg(not(target_os = "macos"))] {
+					#[cfg(not(target_os = "macos"))]
+					{
 						out
 					}
 				})
-				.flatten()
+				.flatten(),
 		);
 	}
 
 	fn process_manual_link_libs(cargo_metadata: &mut Vec<String>, link_libs: &str) {
 		cargo_metadata.extend(
-			Self::process_library_list(Self::list(&link_libs))
-				.map(|l| Self::emit_link_lib(&l, None))
+			Self::process_library_list(Self::list(&link_libs)).map(|l| Self::emit_link_lib(&l, Some("static"))),
 		);
 	}
 
@@ -573,9 +608,7 @@ impl Library {
 		eprintln!("===   link_paths: {}", link_paths);
 		eprintln!("===   link_libs: {}", link_libs);
 		let mut cargo_metadata = Vec::with_capacity(64);
-		let include_paths: Vec<_> = Self::list(&include_paths)
-			.map(PathBuf::from)
-			.collect();
+		let include_paths: Vec<_> = Self::list(&include_paths).map(PathBuf::from).collect();
 
 		let version = Self::version_from_include_paths(include_paths.iter());
 
@@ -589,7 +622,11 @@ impl Library {
 		})
 	}
 
-	pub fn probe_pkg_config(include_paths: Option<&str>, link_paths: Option<&str>, link_libs: Option<&str>) -> Result<Self> {
+	pub fn probe_pkg_config(
+		include_paths: Option<&str>,
+		link_paths: Option<&str>,
+		link_libs: Option<&str>,
+	) -> Result<Self> {
 		eprintln!("=== Probing OpenCV library using pkg_config");
 		let mut config = pkg_config::Config::new();
 		config.cargo_metadata(false);
@@ -598,35 +635,29 @@ impl Library {
 		if let Some(link_paths) = link_paths {
 			Self::process_manual_link_search(&mut cargo_metadata, link_paths);
 		} else {
-			cargo_metadata.extend(
-				opencv.link_paths.into_iter()
-					.map(|link_path|
-						Self::emit_link_search(link_path.to_str().expect("Invalid link path"), Some("native"))
-					)
-			);
-			cargo_metadata.extend(
-				opencv.framework_paths.into_iter()
-					.map(|fw_path|
-						Self::emit_link_search(fw_path.to_str().expect("Invalid framework path"), Some("framework"))
-					)
-			);
+			cargo_metadata.extend(opencv.link_paths.into_iter().map(|link_path| {
+				Self::emit_link_search(link_path.to_str().expect("Invalid link path"), Some("native"))
+			}));
+			cargo_metadata.extend(opencv.framework_paths.into_iter().map(|fw_path| {
+				Self::emit_link_search(
+					fw_path.to_str().expect("Invalid framework path"),
+					Some("framework"),
+				)
+			}));
 		}
 		if let Some(link_libs) = link_libs {
 			Self::process_manual_link_libs(&mut cargo_metadata, link_libs);
 		} else {
+			cargo_metadata.extend(opencv.libs.into_iter().map(|lib| Self::emit_link_lib(&lib, None)));
 			cargo_metadata.extend(
-				opencv.libs.into_iter()
-					.map(|lib| Self::emit_link_lib(&lib, None))
-			);
-			cargo_metadata.extend(
-				opencv.frameworks.into_iter()
-					.map(|fw| Self::emit_link_lib(&fw, Some("framework")))
+				opencv
+					.frameworks
+					.into_iter()
+					.map(|fw| Self::emit_link_lib(&fw, Some("framework"))),
 			);
 		}
 		let include_paths = include_paths.map_or(opencv.include_paths, |include_paths| {
-			Self::list(include_paths)
-				.map(PathBuf::from)
-				.collect()
+			Self::list(include_paths).map(PathBuf::from).collect()
 		});
 		Ok(Self {
 			include_paths,
@@ -635,53 +666,58 @@ impl Library {
 		})
 	}
 
-	pub fn probe_cmake(include_paths: Option<&str>, link_paths: Option<&str>, link_libs: Option<&str>) -> Result<Self> {
+	pub fn probe_cmake(
+		include_paths: Option<&str>,
+		link_paths: Option<&str>,
+		link_libs: Option<&str>,
+	) -> Result<Self> {
 		eprintln!("=== Probing OpenCV library using cmake");
 		let cmake_pkg = PackageName::cmake();
 		let cmake_bin = env::var_os("OPENCV_CMAKE_BIN").unwrap_or_else(|| "cmake".into());
 
 		let include_paths = include_paths
-			.map(|paths| Self::list(paths)
-				.map(PathBuf::from)
-				.collect::<Vec<_>>()
-			)
+			.map(|paths| Self::list(paths).map(PathBuf::from).collect::<Vec<_>>())
 			.ok_or_else(|| "Nobody is going to see that")
-			.or_else(|_| Command::new(&cmake_bin)
-				.current_dir(&*OUT_DIR)
-				.args(&[
-					"--find-package",
-					"-DCOMPILER_ID=GNU",
-					"-DLANGUAGE=CXX",
-					"-DMODE=COMPILE",
-				])
-				.arg(format!("-DNAME={}", cmake_pkg))
-				.output()
-				.map_err(Box::<dyn std::error::Error>::from)
-				.and_then(|output| {
-					if output.status.success() {
-						let mut include_paths = Vec::with_capacity(4);
-						let stdout = String::from_utf8(output.stdout)?;
-						eprintln!("=== cmake include arguments: {:#?}", stdout);
-						for mut arg in Shlex::new(stdout.trim()) {
-							const INCLUDE_PREFIX: &str = "-I";
-							if arg.starts_with(INCLUDE_PREFIX) {
-								arg.drain(..INCLUDE_PREFIX.len());
-								// todo possibly handle leading whitespace
-								include_paths.push(PathBuf::from(arg));
-							} else {
-								eprintln!("=== Unexpected cmake compile argument found: {}", arg);
+			.or_else(|_| {
+				Command::new(&cmake_bin)
+					.current_dir(&*OUT_DIR)
+					.args(&[
+						"--find-package",
+						"-DCOMPILER_ID=GNU",
+						"-DLANGUAGE=CXX",
+						"-DMODE=COMPILE",
+					])
+					.arg(format!("-DNAME={}", cmake_pkg))
+					.output()
+					.map_err(Box::<dyn std::error::Error>::from)
+					.and_then(|output| {
+						if output.status.success() {
+							let mut include_paths = Vec::with_capacity(4);
+							let stdout = String::from_utf8(output.stdout)?;
+							eprintln!("=== cmake include arguments: {:#?}", stdout);
+							for mut arg in Shlex::new(stdout.trim()) {
+								const INCLUDE_PREFIX: &str = "-I";
+								if arg.starts_with(INCLUDE_PREFIX) {
+									arg.drain(..INCLUDE_PREFIX.len());
+									// todo possibly handle leading whitespace
+									include_paths.push(PathBuf::from(arg));
+								} else {
+									eprintln!("=== Unexpected cmake compile argument found: {}", arg);
+								}
 							}
+							Ok(include_paths)
+						} else {
+							Err(
+								format!(
+									"cmake returned an error\n    stdout: {:?}\n    stderr: {:?}",
+									String::from_utf8_lossy(&output.stdout),
+									String::from_utf8_lossy(&output.stderr)
+								)
+								.into(),
+							)
 						}
-						Ok(include_paths)
-					} else {
-						Err(format!(
-							"cmake returned an error\n    stdout: {:?}\n    stderr: {:?}",
-							String::from_utf8_lossy(&output.stdout),
-							String::from_utf8_lossy(&output.stderr)
-						).into())
-					}
-				})
-			)?;
+					})
+			})?;
 
 		if let Some(version) = Self::version_from_include_paths(include_paths.iter()) {
 			let mut cargo_metadata = Vec::with_capacity(64);
@@ -699,45 +735,51 @@ impl Library {
 					.arg(format!("-DNAME={}", cmake_pkg))
 					.output()
 					.map_err(Box::<dyn std::error::Error>::from)
-					.and_then(|output| if output.status.success() {
-						let mut cmake_link_paths = if link_paths.is_some() { HashSet::new() } else { HashSet::with_capacity(4) };
-						let stdout = String::from_utf8(output.stdout)?;
-						eprintln!("=== cmake link arguments: {:#?}", stdout);
-						for mut arg in Shlex::new(stdout.trim()) {
-							const RPATH_PREFIX: &str = "-Wl,-rpath,";
-							if arg.starts_with(RPATH_PREFIX) {
-								arg.drain(..RPATH_PREFIX.len());
-								cmake_link_paths.insert(PathBuf::from(arg));
-							} else if arg.starts_with("-") {
-								eprintln!("=== Unexpected cmake link argument found: {}", arg);
+					.and_then(|output| {
+						if output.status.success() {
+							let mut cmake_link_paths = if link_paths.is_some() {
+								HashSet::new()
 							} else {
-								let mut path = PathBuf::from(arg);
-								if link_paths.is_none() {
-									if let Some(parent) = path.parent() {
-										cmake_link_paths.insert(parent.to_owned());
+								HashSet::with_capacity(4)
+							};
+							let stdout = String::from_utf8(output.stdout)?;
+							eprintln!("=== cmake link arguments: {:#?}", stdout);
+							for mut arg in Shlex::new(stdout.trim()) {
+								const RPATH_PREFIX: &str = "-Wl,-rpath,";
+								if arg.starts_with(RPATH_PREFIX) {
+									arg.drain(..RPATH_PREFIX.len());
+									cmake_link_paths.insert(PathBuf::from(arg));
+								} else if arg.starts_with("-") {
+									eprintln!("=== Unexpected cmake link argument found: {}", arg);
+								} else {
+									let mut path = PathBuf::from(arg);
+									if link_paths.is_none() {
+										if let Some(parent) = path.parent() {
+											cmake_link_paths.insert(parent.to_owned());
+										}
 									}
-								}
-								if link_libs.is_none() {
-									Self::strip_lib_file_decorations(&mut path);
-									if let Some(file) = path.file_name().and_then(OsStr::to_str) {
-										cargo_metadata.push(Self::emit_link_lib(file, None));
+									if link_libs.is_none() {
+										Self::strip_lib_file_decorations(&mut path);
+										if let Some(file) = path.file_name().and_then(OsStr::to_str) {
+											cargo_metadata.push(Self::emit_link_lib(file, None));
+										}
 									}
 								}
 							}
-						}
-						cargo_metadata.extend(
-							cmake_link_paths.into_iter()
-								.map(|link_path|
-									Self::emit_link_search(link_path.to_str().expect("Invalid link path"), Some("native"))
+							cargo_metadata.extend(cmake_link_paths.into_iter().map(|link_path| {
+								Self::emit_link_search(link_path.to_str().expect("Invalid link path"), Some("native"))
+							}));
+							Ok(())
+						} else {
+							Err(
+								format!(
+									"cmake returned an error\n    stdout: {:?}\n    stderr: {:?}",
+									String::from_utf8_lossy(&output.stdout),
+									String::from_utf8_lossy(&output.stderr)
 								)
-						);
-						Ok(())
-					} else {
-						Err(format!(
-							"cmake returned an error\n    stdout: {:?}\n    stderr: {:?}",
-							String::from_utf8_lossy(&output.stdout),
-							String::from_utf8_lossy(&output.stderr)
-						).into())
+								.into(),
+							)
+						}
 					})?
 			};
 
@@ -747,7 +789,13 @@ impl Library {
 				version,
 			})
 		} else {
-			Err(format!("cmake discovery problem: OpenCV version not found in include paths: {:?}", include_paths).into())
+			Err(
+				format!(
+					"cmake discovery problem: OpenCV version not found in include paths: {:?}",
+					include_paths
+				)
+				.into(),
+			)
 		}
 	}
 
@@ -766,12 +814,17 @@ impl Library {
 		})
 	}
 
-	pub fn probe_system(include_paths: Option<&str>, link_paths: Option<&str>, link_libs: Option<&str>) -> Result<Self> {
+	pub fn probe_system(
+		include_paths: Option<&str>,
+		link_paths: Option<&str>,
+		link_libs: Option<&str>,
+	) -> Result<Self> {
 		let probe_pkg_config = || Self::probe_pkg_config(include_paths, link_paths, link_libs);
 		let probe_cmake = || Self::probe_cmake(include_paths, link_paths, link_libs);
 		let probe_vcpkg = || Self::probe_vcpkg();
 
-		let explicit_pkg_config = env::var_os("PKG_CONFIG_PATH").is_some() || env::var_os("OPENCV_PKGCONFIG_NAME").is_some();
+		let explicit_pkg_config =
+			env::var_os("PKG_CONFIG_PATH").is_some() || env::var_os("OPENCV_PKGCONFIG_NAME").is_some();
 		let explicit_cmake = env::var_os("OpenCV_DIR").is_some()
 			|| env::var_os("OPENCV_CMAKE_NAME").is_some()
 			|| env::var_os("CMAKE_PREFIX_PATH").is_some()
@@ -779,7 +832,8 @@ impl Library {
 		let explicit_vcpkg = env::var_os("VCPKG_ROOT").is_some() || cfg!(target_os = "windows");
 
 		let disabled_probes = env::var("OPENCV_DISABLE_PROBES");
-		let disabled_probes = disabled_probes.as_ref()
+		let disabled_probes = disabled_probes
+			.as_ref()
 			.map(|s| HashSet::from_iter(Self::list(s)))
 			.unwrap_or_else(|_| HashSet::new());
 
@@ -807,27 +861,32 @@ impl Library {
 		for &(name, probe) in &probes {
 			if !disabled_probes.contains(name) {
 				match probe() {
-					Ok(lib) => {
-						match check_matching_version(&lib.version) {
-							Ok(..) => {
-								out = Some(lib);
-								break;
-							},
-							Err(e) => {
-								eprintln!("=== Wrong version: {} using {}, continuing: {:#?}", e, name, lib);
-							}
+					Ok(lib) => match check_matching_version(&lib.version) {
+						Ok(..) => {
+							out = Some(lib);
+							break;
 						}
-					}
+						Err(e) => {
+							eprintln!("=== Wrong version: {} using {}, continuing: {:#?}", e, name, lib);
+						}
+					},
 					Err(e) => {
-						eprintln!("=== Can't probe using {}, continuing with other methods, error: {}", name, e);
+						eprintln!(
+							"=== Can't probe using {}, continuing with other methods, error: {}",
+							name, e
+						);
 					}
 				}
 			} else {
-				eprintln!("=== Skipping probe {} because of the environment configuration", name);
+				eprintln!(
+					"=== Skipping probe {} because of the environment configuration",
+					name
+				);
 			}
 		}
 		out.ok_or_else(|| {
-			let methods = probes.iter()
+			let methods = probes
+				.iter()
 				.map(|&(name, _)| name)
 				.filter(|&name| !disabled_probes.contains(name))
 				.collect::<Vec<_>>()
@@ -840,10 +899,16 @@ impl Library {
 		let include_paths = env::var("OPENCV_INCLUDE_PATHS").ok();
 		let link_paths = env::var("OPENCV_LINK_PATHS").ok();
 		let link_libs = env::var("OPENCV_LINK_LIBS").ok();
-		if let (Some(include_paths), Some(link_paths), Some(link_libs)) = (&include_paths, &link_paths, &link_libs) {
+		if let (Some(include_paths), Some(link_paths), Some(link_libs)) =
+			(&include_paths, &link_paths, &link_libs)
+		{
 			Self::probe_from_paths(include_paths, link_paths, link_libs)
 		} else {
-			Self::probe_system(include_paths.as_deref(), link_paths.as_deref(), link_libs.as_deref())
+			Self::probe_system(
+				include_paths.as_deref(),
+				link_paths.as_deref(),
+				link_libs.as_deref(),
+			)
 		}
 	}
 
@@ -858,8 +923,7 @@ fn file_copy_to_dir(src_file: &Path, target_dir: &Path) -> Result<PathBuf> {
 	if !target_dir.exists() {
 		fs::create_dir_all(&target_dir)?;
 	}
-	let src_filename = src_file.file_name()
-		.ok_or_else(|| "Can't calculate filename")?;
+	let src_filename = src_file.file_name().ok_or_else(|| "Can't calculate filename")?;
 	let target_file = target_dir.join(src_filename);
 	fs::copy(&src_file, &target_file)?;
 	Ok(target_file)
@@ -921,11 +985,29 @@ fn get_version_from_headers(header_dir: &Path) -> Option<String> {
 fn check_matching_version(version: &str) -> Result<()> {
 	#![allow(clippy::ifs_same_cond)] // false trigger
 	if cfg!(feature = "opencv-32") && !VersionReq::parse("~3.2")?.matches(&Version::parse(version)?) {
-		Err(format!("OpenCV version: {} must be from 3.2 branch because of the feature: opencv-32", version).into())
+		Err(
+			format!(
+				"OpenCV version: {} must be from 3.2 branch because of the feature: opencv-32",
+				version
+			)
+			.into(),
+		)
 	} else if cfg!(feature = "opencv-34") && !VersionReq::parse("~3.4")?.matches(&Version::parse(version)?) {
-		Err(format!("OpenCV version: {} must be from 3.4 branch because of the feature: opencv-34", version).into())
+		Err(
+			format!(
+				"OpenCV version: {} must be from 3.4 branch because of the feature: opencv-34",
+				version
+			)
+			.into(),
+		)
 	} else if cfg!(feature = "opencv-4") && !VersionReq::parse("~4")?.matches(&Version::parse(version)?) {
-		Err(format!("OpenCV version: {} must be from 4.x branch because of the feature: opencv-4", version).into())
+		Err(
+			format!(
+				"OpenCV version: {} must be from 4.x branch because of the feature: opencv-4",
+				version
+			)
+			.into(),
+		)
 	} else {
 		Ok(())
 	}
@@ -950,23 +1032,31 @@ fn get_versioned_hub_dirs() -> (PathBuf, PathBuf) {
 
 fn make_modules(opencv_dir_as_string: &str) -> Result<()> {
 	if !DEBUG_MODULE.is_empty() {
-		MODULES.set(vec![DEBUG_MODULE.to_string()]).expect("Can't set debug MODULES cache");
-		return Ok(())
+		MODULES
+			.set(vec![DEBUG_MODULE.to_string()])
+			.expect("Can't set debug MODULES cache");
+		return Ok(());
 	}
-	let ignore_modules: HashSet<&'static str> = HashSet::from_iter([
-		"core_detect",
-		"cudalegacy",
-		"cudev",
-		"gapi",
-		"opencv",
-		"opencv_modules",
-	].iter().copied());
+	let ignore_modules: HashSet<&'static str> = HashSet::from_iter(
+		[
+			"core_detect",
+			"cudalegacy",
+			"cudev",
+			"gapi",
+			"opencv",
+			"opencv_modules",
+		]
+		.iter()
+		.copied(),
+	);
 
 	let modules: Vec<String> = glob(&format!("{}/*.hpp", opencv_dir_as_string))?
 		.filter_map(|entry| {
 			let entry = entry.expect("Can't get path for module file");
-			let module = entry.file_stem()
-				.and_then(OsStr::to_str).expect("Can't calculate file stem");
+			let module = entry
+				.file_stem()
+				.and_then(OsStr::to_str)
+				.expect("Can't calculate file stem");
 			if ignore_modules.contains(module) {
 				None
 			} else {
@@ -993,9 +1083,10 @@ fn build_compiler(opencv: &Library) -> cc::Build {
 		.flag_if_supported("-Wno-deprecated-declarations")
 		.flag_if_supported("-Wno-deprecated-copy")
 		.flag_if_supported("-Wno-unused-variable")
-		.flag_if_supported("-Wno-return-type-c-linkage")
-	;
-	opencv.include_paths.iter().for_each(|p| { out.include(p); });
+		.flag_if_supported("-Wno-return-type-c-linkage");
+	opencv.include_paths.iter().for_each(|p| {
+		out.include(p);
+	});
 	if cfg!(target_env = "msvc") {
 		out.flag_if_supported("-std:c++latest")
 			.flag_if_supported("-wd4996")
@@ -1003,12 +1094,9 @@ fn build_compiler(opencv: &Library) -> cc::Build {
 			.flag_if_supported("-wd4190") // has C-linkage specified, but returns UDT 'Result<cv::Rect_<int>>' which is incompatible with C
 			.flag_if_supported("-EHsc")
 			.flag_if_supported("-bigobj")
-			.pic(false)
-		;
+			.pic(false);
 	} else {
-		out.flag("-std=c++11")
-			.flag_if_supported("-Wa,-mbig-obj")
-		;
+		out.flag("-std=c++11").flag_if_supported("-Wa,-mbig-obj");
 	}
 	out
 }
@@ -1030,7 +1118,10 @@ fn build_wrapper(opencv: &Library) -> Result<()> {
 
 	let mut cc = build_compiler(opencv);
 	let modules = MODULES.get().expect("MODULES not initialized");
-	for module in modules.iter().filter(|m| cfg!(feature = "contrib") || is_core_module(m)) {
+	for module in modules
+		.iter()
+		.filter(|m| cfg!(feature = "contrib") || is_core_module(m))
+	{
 		cc.file(OUT_DIR.join(format!("{}.cpp", module)));
 		let manual_cpp = SRC_CPP_DIR.join(format!("manual-{}.cpp", module));
 		if manual_cpp.exists() {
@@ -1082,23 +1173,31 @@ fn cleanup() -> Result<()> {
 }
 
 fn main() -> Result<()> {
-	let features = [cfg!(feature = "opencv-32"), cfg!(feature = "opencv-34"), cfg!(feature = "opencv-4")].iter().map(|&x| i32::from(x)).sum::<i32>();
+	let features = [
+		cfg!(feature = "opencv-32"),
+		cfg!(feature = "opencv-34"),
+		cfg!(feature = "opencv-4"),
+	]
+	.iter()
+	.map(|&x| i32::from(x))
+	.sum::<i32>();
 	if features != 1 {
 		panic!("Please select exactly one of the features: opencv-32, opencv-34, opencv-4");
 	}
 
 	#[cfg(feature = "buildtime-bindgen")]
-	let generator_build = if cfg!(feature = "clang-runtime") { // start building binding generator as early as possible
+	let generator_build = if cfg!(feature = "clang-runtime") {
+		// start building binding generator as early as possible
 		None
-		// fixme, https://github.com/twistedfall/opencv-rust/issues/145
-		// let cargo_bin = PathBuf::from(env::var_os("CARGO").unwrap_or("cargo".into()));
-		// let mut cargo = Command::new(cargo_bin);
-		// // generator script is quite slow in debug mode, so we force it to be built in release mode
-		// cargo
-		// 	.args(&["build", "--release", "--package", "opencv-binding-generator", "--bin", "binding-generator"])
-		// 	.env("CARGO_TARGET_DIR", &*OUT_DIR);
-		// println!("running: {:?}", &cargo);
-		// Some(cargo.spawn()?)
+	// fixme, https://github.com/twistedfall/opencv-rust/issues/145
+	// let cargo_bin = PathBuf::from(env::var_os("CARGO").unwrap_or("cargo".into()));
+	// let mut cargo = Command::new(cargo_bin);
+	// // generator script is quite slow in debug mode, so we force it to be built in release mode
+	// cargo
+	// 	.args(&["build", "--release", "--package", "opencv-binding-generator", "--bin", "binding-generator"])
+	// 	.env("CARGO_TARGET_DIR", &*OUT_DIR);
+	// println!("running: {:?}", &cargo);
+	// Some(cargo.spawn()?)
 	} else {
 		None
 	};
@@ -1109,19 +1208,18 @@ fn main() -> Result<()> {
 		eprintln!("===   {} = {:?}", v, env::var_os(v));
 	}
 	eprintln!("=== Enabled features:");
-	let features = env::vars()
-		.filter_map(|(mut name, val)| {
-			if val != "1" {
-				return None;
-			}
-			const PREFIX: &str = "CARGO_FEATURE_";
-			if name.starts_with(PREFIX) {
-				name.drain(..PREFIX.len());
-				Some(name)
-			} else {
-				None
-			}
-		});
+	let features = env::vars().filter_map(|(mut name, val)| {
+		if val != "1" {
+			return None;
+		}
+		const PREFIX: &str = "CARGO_FEATURE_";
+		if name.starts_with(PREFIX) {
+			name.drain(..PREFIX.len());
+			Some(name)
+		} else {
+			None
+		}
+	});
 	for feature in features {
 		eprintln!("===   {}", feature);
 	}
@@ -1157,10 +1255,23 @@ fn main() -> Result<()> {
 	make_modules(&opencv_header_dir.join("opencv2").to_string_lossy())?;
 
 	if let Some(version) = get_version_from_headers(&opencv_header_dir) {
-		check_matching_version(&version).map_err(|e| format!("{}, (version coming from headers at: {})", e, opencv_header_dir.display()))?;
-		eprintln!("=== Found OpenCV library version: {} in headers located at: {}", version, opencv_header_dir.display());
+		check_matching_version(&version).map_err(|e| {
+			format!(
+				"{}, (version coming from headers at: {})",
+				e,
+				opencv_header_dir.display()
+			)
+		})?;
+		eprintln!(
+			"=== Found OpenCV library version: {} in headers located at: {}",
+			version,
+			opencv_header_dir.display()
+		);
 	} else {
-		panic!("Unable to find header version in: {}", opencv_header_dir.display())
+		panic!(
+			"Unable to find header version in: {}",
+			opencv_header_dir.display()
+		)
 	}
 
 	#[cfg(feature = "buildtime-bindgen")]
